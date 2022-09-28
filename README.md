@@ -41,3 +41,7 @@ Trying to fetch this file failed with a `404`:
 
 - `fetch('/api/usersData.json').then(res => res.text()).then(console.log)`
 - `fetch('/api/usersData').then(res => res.text()).then(console.log)`
+
+## Serverless Functions - `import` vs `require`
+
+When deploying a Vite app on Vercel and utilizing the `/api` directory for a back end with Serverless Functions, modules need to be imported via `require`, not `import`. You can still import types. See [this answer](https://github.com/vercel/community/discussions/893#discussioncomment-3756470) (and conversation) in Vercel's community discussions.
