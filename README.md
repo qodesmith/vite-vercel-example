@@ -44,7 +44,7 @@ Trying to fetch this file failed with a `404`:
 
 ## Serverless Functions - `import` vs `require`
 
-When deploying a Vite app on Vercel and utilizing the `/api` directory for a back end with Serverless Functions, modules need to be imported via `require`, not `import`. You can still import types. See [this answer](https://github.com/vercel/community/discussions/893#discussioncomment-3756470) (and conversation) in Vercel's community discussions.
+When deploying a Vite app on Vercel and utilizing the `/api` directory for a back end with Serverless Functions, _Node_ modules need to be imported via `require`, not `import`. The `import` syntax works for types and _local_ modules. See [this answer](https://github.com/vercel/community/discussions/893#discussioncomment-3756470) (and conversation) in Vercel's community discussions.
 
 ## Non-Endpoint Files In `/api`
 

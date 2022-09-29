@@ -1,6 +1,13 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
+
+// `import` syntax works for local modules.
 import {fakeAdd, fakeHello} from './helpers'
+
+/*
+  https://github.com/vercel/community/discussions/893#discussioncomment-3756470
+  The `require` syntax is needed to import Node modules.
+*/
 const path = require('path')
 const fs = require('fs-extra')
 
