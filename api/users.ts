@@ -1,15 +1,14 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
 const path = require('path')
-const fsOriginal = require('fs')
 const fs = require('fs-extra')
+const {fakeAdd, fakeHello} = require('./helpers')
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('path module:', path)
-  console.log('fs-extra module:', fs)
-  console.log('fs module:', fsOriginal)
-
   try {
+    console.log('2 + 3', fakeAdd(2, 'hi'))
+    console.log('Hello', fakeHello('world'))
+
     // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
     const pathFromProjectRootToFile = '/api/usersData.json'
     const usersDataFilePath = path.join(
