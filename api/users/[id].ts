@@ -13,7 +13,7 @@ const fs = require('fs-extra')
 export default function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
-    const pathFromProjectRootToFile = '/api/usersData.json'
+    const pathFromProjectRootToFile = '/api/users/usersData.json'
     const usersDataFilePath = path.join(
       process.cwd(),
       pathFromProjectRootToFile
