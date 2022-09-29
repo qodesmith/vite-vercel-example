@@ -13,6 +13,22 @@ Build error received:
 Error: Two or more files have conflicting paths or names. Please make sure path segments and filenames, without their extension, are unique. The path "api/users.ts" has conflicts with "api/users.json".
 ```
 
+## Same File & Folder Name
+
+File - `/api/users.ts`
+File in folder - `/api/users/[id].ts`
+
+According to the [Vercel docs](https://vercel.com/docs/concepts/functions/serverless-functions#path-segments):
+
+> When using path segments, the value passed is made available to the `req.query` object under the key used for the file name.
+
+Vercel is able to hit both files accordingly. There are no conflicts:
+
+```javascript
+fetch('/api/users')
+fetch('/api/users/1')
+```
+
 ## Node Version
 
 As of 9/23/2022, Vercel is using Node 16.x. Using the `engines` field in `package.json` to specify a higher version does not work:
