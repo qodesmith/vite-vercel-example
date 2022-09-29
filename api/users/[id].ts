@@ -1,5 +1,6 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
+import type {User} from '../users'
 import {errorToObject, createLocaleDate, createDateString} from '../helpers'
 
 /*
@@ -17,15 +18,19 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       process.cwd(),
       pathFromProjectRootToFile
     )
-    const usersData = fs.readJSONSync(usersDataFilePath)
+    const usersData: User[] = fs.readJSONSync(usersDataFilePath)
     const user = usersData.find(user => user.id.toString() === req.query.id)
 
     if (user) {
-      user.localeDate = createLocaleDate(user.dob)
-      user.dateString = createDateString(user.dob)
+      const newUser = {
+        ...user,
+        localeDate: createLocaleDate(user.dob),
+        dateString: createDateString(user.dob),
+      }
+      res.json(newUser)
+    } else {
+      res.json(null)
     }
-
-    res.json(user)
   } catch (e) {
     res.json({error: errorToObject(e as Error)})
   }

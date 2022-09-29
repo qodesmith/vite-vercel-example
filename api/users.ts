@@ -10,6 +10,16 @@ import {
   errorToObject,
 } from './helpers'
 
+export type User = {
+  id: number
+  firstName: string
+  dob: {
+    month: number
+    day: number
+    year: number
+  }
+}
+
 /*
   https://github.com/vercel/community/discussions/893#discussioncomment-3756470
   The `require` syntax is needed to import Node modules.
@@ -28,7 +38,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       process.cwd(),
       pathFromProjectRootToFile
     )
-    const usersData = fs.readJSONSync(usersDataFilePath)
+    const usersData: User[] = fs.readJSONSync(usersDataFilePath)
     const usersDataWithDates = usersData.map(({dob, ...rest}) => ({
       ...rest,
       dob,
