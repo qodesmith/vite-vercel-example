@@ -8,7 +8,7 @@ import {
   createLocaleDate,
   createDateString,
   errorToObject,
-} from './helpers'
+} from '../helpers'
 
 export type User = {
   id: number
