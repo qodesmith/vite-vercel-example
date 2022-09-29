@@ -1,8 +1,8 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
+import {fakeAdd, fakeHello} from './helpers'
 const path = require('path')
 const fs = require('fs-extra')
-const {fakeAdd, fakeHello} = require('./helpers')
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   try {
