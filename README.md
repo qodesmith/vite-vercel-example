@@ -45,3 +45,27 @@ Trying to fetch this file failed with a `404`:
 ## Serverless Functions - `import` vs `require`
 
 When deploying a Vite app on Vercel and utilizing the `/api` directory for a back end with Serverless Functions, modules need to be imported via `require`, not `import`. You can still import types. See [this answer](https://github.com/vercel/community/discussions/893#discussioncomment-3756470) (and conversation) in Vercel's community discussions.
+
+## Non-Endpoint Files In `/api`
+
+File: `/api/helpers.ts`
+
+Code used:
+
+```javascript
+fetch('/api/helpers')
+  .then(res => res.text())
+  .then(console.log)
+  .catch(e => console.log('catch:', e))
+```
+
+After a few seconds, this resulted in a [502](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/502) error:
+
+```
+GET https://vite-vercel-example-sqn5.vercel.app/api/helpers 502
+An error occurred with this application.
+
+NO_RESPONSE_FROM_FUNCTION
+```
+
+Purposely trying to access a file that doesn't exist (`/api/helperz` - "z") correctly results in a 404.
