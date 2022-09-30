@@ -2,36 +2,10 @@ import reactLogo from './assets/react.svg'
 import './App.css'
 import './user.css'
 import {useEffect, useState} from 'react'
-
-/*
-  These are the same as the first 2 users that come from the back end. This data
-  is to simply get a sanity check on the screen.
-*/
-const defaultUsers = [
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Doe',
-    dob: {
-      month: 5,
-      day: 15,
-      year: 1982,
-    },
-  },
-  {
-    id: 2,
-    firstName: 'Jane',
-    lastName: 'Doe',
-    dob: {
-      month: 6,
-      day: 17,
-      year: 1985,
-    },
-  },
-]
+import type {UserType} from '../api/users'
 
 function App() {
-  const [users, setUsers] = useState(defaultUsers)
+  const [users, setUsers] = useState<UserType[]>([])
   const [error, setError] = useState(null)
 
   useEffect(() => {

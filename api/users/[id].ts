@@ -1,6 +1,6 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
-import type {User} from './index'
+import type {UserType} from './index'
 import {errorToObject, createLocaleDate, createDateString} from '../helpers'
 
 /*
@@ -18,7 +18,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       process.cwd(),
       pathFromProjectRootToFile
     )
-    const usersData: User[] = fs.readJSONSync(usersDataFilePath)
+    const usersData: UserType[] = fs.readJSONSync(usersDataFilePath)
     const user = usersData.find(user => user.id.toString() === req.query.id)
 
     if (user) {

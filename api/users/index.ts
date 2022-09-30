@@ -10,9 +10,10 @@ import {
   errorToObject,
 } from '../helpers'
 
-export type User = {
+export type UserType = {
   id: number
   firstName: string
+  lastName: string
   dob: {
     month: number
     day: number
@@ -38,7 +39,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       process.cwd(),
       pathFromProjectRootToFile
     )
-    const usersData: User[] = fs.readJSONSync(usersDataFilePath)
+    const usersData: UserType[] = fs.readJSONSync(usersDataFilePath)
     const usersDataWithDates = usersData.map(({dob, ...rest}) => ({
       ...rest,
       dob,
