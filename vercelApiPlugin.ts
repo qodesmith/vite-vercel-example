@@ -101,9 +101,9 @@ function reqQueryMiddleware(req, res, next) {
   const url = new URL(req.url ?? '', `http://${req?.headers.host ?? ''}`)
   const queryObj = req.query ?? {}
 
-  for (const [key, value] of url.searchParams) {
+  url.searchParams.forEach((value, key) => {
     queryObj[key] = value
-  }
+  })
 
   req.query = queryObj
 
