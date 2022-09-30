@@ -2,10 +2,9 @@ import reactLogo from './assets/react.svg'
 import './App.css'
 import './user.css'
 import {useEffect, useState} from 'react'
-import type {UserType} from '../api/users'
 
 function App() {
-  const [users, setUsers] = useState<UserType[]>([])
+  const [users, setUsers] = useState([])
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -29,8 +28,15 @@ function App() {
         <a href="https://reactjs.org" target="_blank">
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
+        <a href="https://vercel.com" target="_blank">
+          <img
+            src="/vercel-icon-light.svg"
+            className="logo"
+            alt="Vercel logo"
+          />
+        </a>
       </div>
-      <h1>Vite + React</h1>
+      <h1>Vite + React + Vercel</h1>
       <div className="card">
         {error ? (
           <pre>

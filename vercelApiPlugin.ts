@@ -44,6 +44,8 @@ export default function vercelApiPlugin(): PluginOption {
       // Vercel-like `/api` functionality as middleware //
       ////////////////////////////////////////////////////
 
+      return
+
       const apiPath = path.resolve('./api')
       if (!fs.existsSync(apiPath)) return
 
