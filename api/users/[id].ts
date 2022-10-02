@@ -7,10 +7,6 @@ import {errorToObject, createLocaleDate, createDateString} from '../helpers'
   https://github.com/vercel/community/discussions/893#discussioncomment-3756470
   The `require` syntax is needed to import Node modules.
 */
-import {createRequire} from 'module'
-if (process.env.VERCEL_ENV !== 'production') {
-  global.require = createRequire(import.meta.url)
-}
 const path = require('path')
 const fs = require('fs-extra')
 
