@@ -11,6 +11,7 @@ const path = require('path')
 const fs = require('fs-extra')
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('req.query:', req.query)
   try {
     // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
     const pathFromProjectRootToFile = '/api/users/usersData.json'
