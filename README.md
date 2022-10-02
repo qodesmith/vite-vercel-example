@@ -85,3 +85,18 @@ NO_RESPONSE_FROM_FUNCTION
 ```
 
 Purposely trying to access a file that doesn't exist (`/api/helperz` - "z") correctly results in a 404.
+
+## Query Params
+
+When using dynamic routes, the dynamic information is populated on `req.query`. I had wondered if this would collide with regular url query params. _TL;DR - Vercel's dynamic route information takes precedence._
+
+Route file - `/api/users/[id].ts`
+
+- This will populate `req.query.id`
+
+Example URL's and the resulting `req.query`:
+| URL | req.query |
+|--------------------------------|-----------------------------|
+| /api/users/4 | `{id: '4'}` |
+| /api/users/4?hello=world | `{id: '4', hello: 'world'}` |
+| /api/users/4?hello=world&id=55 | `{id: '4', hello: 'world'}` |
