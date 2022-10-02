@@ -25,6 +25,8 @@ export type UserType = {
   https://github.com/vercel/community/discussions/893#discussioncomment-3756470
   The `require` syntax is needed to import Node modules.
 */
+import {createRequire} from 'module'
+const require = createRequire(import.meta.url)
 const path = require('path')
 const fs = require('fs-extra')
 
