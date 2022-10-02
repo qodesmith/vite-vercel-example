@@ -2,8 +2,9 @@
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
-    "allowSyntheticDefaultImports": true
+    "moduleResolution": "NodeNext",
+    "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true
   },
-  "include": ["vite.config.ts", "vercelApiPlugin.ts"]
+  "include": ["vite.config.ts", "vercelApiPlugin.ts", "getApiRoutesData.ts"]
 }
