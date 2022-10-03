@@ -106,8 +106,24 @@ Route file - `/api/users/[id].ts`
 - This will populate `req.query.id`
 
 Example URL's and the resulting `req.query`:
-| URL | req.query |
-|--------------------------------|-----------------------------|
-| /api/users/4 | `{id: '4'}` |
-| /api/users/4?hello=world | `{id: '4', hello: 'world'}` |
+
+| URL                            | req.query                   |
+| ------------------------------ | --------------------------- |
+| /api/users/4                   | `{id: '4'}`                 |
+| /api/users/4?hello=world       | `{id: '4', hello: 'world'}` |
 | /api/users/4?hello=world&id=55 | `{id: '4', hello: 'world'}` |
+
+## Assets - `/public` vs `/assets`
+
+Both these directories serve static assets, so what's the difference? From what the [Vite docs](https://vitejs.dev/guide/assets.html) say, here's what I understand:
+
+| `/assets`                                    | `/public`                                                        |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| Consumed in code via the `import` statement. | No `import` statement - consume from the root like `/asset.jpg`. |
+| Will a get hashed file name at build time.   | Name remains unchanged.                                          |
+
+## Caching Static Assets
+
+I noticed a flash around the 3 logos, indicating some logos were loading before others. When throttling the speed down to slow 3G in Chrome devtools, the Vite logo was taking some time.
+
+Adding a `vercel.json` with [headers](https://vercel.com/docs/project-configuration#project-configuration/headers) for caching showed that the Vite logo loaded instantly on the next refresh. The Vercel logo was slow too, so after adding _that_ file to the config for caching it also loaded immediately.
