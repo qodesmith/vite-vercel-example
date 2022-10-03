@@ -127,3 +127,21 @@ Both these directories serve static assets, so what's the difference? From what 
 I noticed a flash around the 3 logos, indicating some logos were loading before others. When throttling the speed down to slow 3G in Chrome devtools, the Vite logo was taking some time.
 
 Adding a `vercel.json` with [headers](https://vercel.com/docs/project-configuration#project-configuration/headers) for caching showed that the Vite logo loaded instantly on the next refresh. The Vercel logo was slow too, so after adding _that_ file to the config for caching it also loaded immediately.
+
+Since it's not possible to cache assets in the `/assets` directory by name because of hash changes, I was able to target the React svg by caching _all_ svgs with these settings:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*).svg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=604800, must-revalidate, public"
+        }
+      ]
+    }
+  ]
+}
+```
