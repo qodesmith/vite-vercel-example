@@ -5,4 +5,5 @@ import vercelApiPlugin from './vercelApiPlugin'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), vercelApiPlugin()],
+  clearScreen: false,
 })

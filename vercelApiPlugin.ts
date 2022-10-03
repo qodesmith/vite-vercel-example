@@ -1,8 +1,10 @@
+import type {PluginOption} from 'vite'
+
 import path from 'node:path'
 import fs from 'node:fs'
 import cookie from 'cookie'
 import bodyParser from 'body-parser'
-import type {PluginOption} from 'vite'
+import addApiRoutesMiddleware from './addApiRoutesMiddleware'
 
 /*
   Middleware supported by Connect - https://github.com/senchalabs/connect#middleware
@@ -44,53 +46,13 @@ export default function vercelApiPlugin(): PluginOption {
       // Vercel-like `/api` functionality as middleware //
       ////////////////////////////////////////////////////
 
-      return
-
       const apiPath = path.resolve('./api')
       if (!fs.existsSync(apiPath)) return
 
-      /*
-        Scan the `/api` directory for js files. Any file in this directory
-        will export a default handler function that acts as a backend API
-        route.
-      */
-      const promises = fs
-        .readdirSync(apiPath, {withFileTypes: true})
-        .reduce((acc, dirent) => {
-          const {name} = dirent
-
-          // Only be concerned with files - ignore folders (for now).
-          if (
-            dirent.isFile() &&
-            (name.endsWith('.js') || name.endsWith('.ts'))
-          ) {
-            /*
-              Dynamically import the module (a promise) and return an object
-              with the handler and associated route. The route is simply the
-              name of the file without the file extension.
-
-              fetch(/<name-of-file>)
-            */
-            const promise = import(`${apiPath}/${name}`).then(jsModule => {
-              const nameWithoutExtension = path.parse(name).name
-
-              return {
-                handler: jsModule.default,
-                route: `/api/${nameWithoutExtension}`,
-              }
-            })
-
-            acc.push(promise)
-          }
-          return acc
-        }, [])
-
-      const middlewareModules = await Promise.all(promises)
-
-      for (let i = 0; i < middlewareModules.length; i++) {
-        const {handler, route} = middlewareModules[i]
-        devServer.middlewares.use(route, handler)
-      }
+      const results = await addApiRoutesMiddleware(devServer)
+      console.log('RESULTS:')
+      console.dir(results, {depth: null})
+      process.exit(1)
     },
   }
 }
