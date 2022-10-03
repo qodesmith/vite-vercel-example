@@ -2,6 +2,8 @@
 
 ## Conflicting File Names
 
+### Scenario 1 - json & ts
+
 Files existing:
 
 - `/api/users.json`
@@ -12,6 +14,15 @@ Build error received:
 ```
 Error: Two or more files have conflicting paths or names. Please make sure path segments and filenames, without their extension, are unique. The path "api/users.ts" has conflicts with "api/users.json".
 ```
+
+### Scenario 2 - duplicate entrypoints
+
+Files existing:
+
+- `/api/users.ts`
+- `/api/users/index.ts`
+
+Individuall, both files would successfully respond to `fetch(/api/users)`. When both files are in the filesystem, Vercel prioritizes `/api/users.ts` and ignores the other one.
 
 ## Same File & Folder Name
 
