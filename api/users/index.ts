@@ -32,7 +32,12 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log('2 + 3:', fakeAdd(2, 3))
     console.log('Hello:', fakeHello('world'))
-    console.log('req.headers:', req.headers)
+    console.log('req.url:', req.url)
+    console.log('http url:', `http://${req.headers.host ?? ''}`)
+    console.log(
+      'new URL(...):',
+      new URL(req.url ?? '', `http://${req.headers.host ?? ''}`)
+    )
 
     // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
     const pathFromProjectRootToFile = '/api/users/usersData.json'
