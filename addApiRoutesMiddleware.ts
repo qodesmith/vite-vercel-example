@@ -1,18 +1,32 @@
 import type {VercelRequest, VercelResponse} from '@vercel/node'
 import type {ViteDevServer} from 'vite'
+import type {BuildResult} from 'esbuild'
 
 import path from 'path'
 import fs from 'fs-extra'
 import esbuild from 'esbuild'
+
+type ApiDataType = Record<string, ApiRouteDataType>
+
+type ApiRouteDataType = Record<
+  FileType,
+  Pick<RouteHandlerDataType, 'handler' | 'param' | 'filePath'>
+>
 
 type RouteHandlerDataType = {
   handler: HandlerType
   type: FileType
   route: string
   param: string | undefined
+  filePath: string
 }
 
 type HandlerType = (req: VercelRequest, res: VercelResponse) => void
+
+type BuildResultsType = {
+  esbuildResults: BuildResult
+  originalFiles: string[]
+}
 
 type FileType =
   | 'explicit' /* cars.ts */
@@ -26,47 +40,211 @@ export default async function addApiRoutesMiddleware(devServer: ViteDevServer) {
 
   const buildResults = await buildApiFiles(apiPath)
   const routeHandlers = await createRouteHandlerData(buildResults)
+  addApiRoutes(routeHandlers, devServer)
 
-  return routeHandlers
+  // console.log('API ROUTE HANDLERS:')
+  // console.dir(routeHandlers, {depth: null})
 }
 
-async function buildApiFiles(basePath) {
-  return esbuild.build({
-    // Have esbuild process many files at once.
-    entryPoints: getEntryPoints(basePath),
+async function buildApiFiles(basePath): Promise<BuildResultsType> {
+  const entryPoints = getEntryPoints(basePath)
+  const originalFiles = entryPoints.map(absolutePath => {
+    return absolutePath.slice(absolutePath.indexOf('/api'))
+  })
 
-    // Avoid bundling anything from node_modules.
-    external: ['./node_modules/*'],
+  return esbuild
+    .build({
+      // Have esbuild process many files at once.
+      entryPoints,
 
-    /*
+      // Avoid bundling anything from node_modules.
+      external: ['./node_modules/*'],
+
+      /*
         Bundle local dependencies (node_modules is ignored above). Anything from
         node_modules can be imported and used at runtime.
       */
-    bundle: true,
+      bundle: true,
 
-    // After all, this is for mimicing Vercel's /api functionality in Node.
-    platform: 'node',
+      // After all, this is for mimicing Vercel's /api functionality in Node.
+      platform: 'node',
 
-    // Stick with esm as opposed to CommonJS.
-    format: 'esm',
+      // Stick with esm as opposed to CommonJS.
+      format: 'esm',
 
-    // Don't write the results to any file, keep it in memory for later use.
-    write: false,
+      // Don't write the results to any file, keep it in memory for later use.
+      write: false,
 
-    // Helpful while developing and debugging. Doesn't affect the output.
-    metafile: true,
+      // Helpful while developing and debugging. Doesn't affect the output.
+      metafile: true,
 
-    /*
-      Ensure non-native node_modules have an absolute file://... url.
-      Transform the few require()'s that we have to esm.
-    */
-    plugins: [fileUrlPlugin, requireToEsm],
-
-    /*
-        No output directory will be written to because of `write:false`.
-        This is still used to appropriately construct `require()` urls.
+      /*
+        Ensure non-native node_modules have an absolute file://... url.
+        Transform the few require()'s that we have to esm.
+        Vite + Vercel needs require() for node_modules - https://bit.ly/3EiphjJ
       */
-    outdir: '/api',
+      plugins: [fileUrlPlugin, requireToEsm],
+
+      /*
+        No output directory will be written to because of `write:false`.
+        This is still used to appropriately construct require() urls.
+      */
+      outdir: '/api',
+    })
+    .then(esbuildResults => {
+      return {esbuildResults, originalFiles}
+    })
+}
+
+async function createRouteHandlerData(buildResults: Awaited<BuildResultsType>) {
+  const {esbuildResults, originalFiles} = buildResults
+  const {outputFiles = []} = esbuildResults
+
+  const promises: Promise<RouteHandlerDataType | null>[] = outputFiles.map(
+    (file, i) => {
+      const {text} = file
+      const filePath = originalFiles[i]
+      const fileName = filePath.split('/').pop() ?? ''
+
+      /*
+        https://2ality.com/2019/10/eval-via-import.html
+        eval() doesn't support import and export statements, but dynamic
+        import() does, using a `data:` URI.
+      */
+      const encodedJs = encodeURIComponent(text)
+      const dataUri = `data:text/javascript;charset=utf-8,${encodedJs}`
+
+      return import(dataUri)
+        .then(mod => {
+          // Only process modules with a default export.
+          if (typeof mod !== 'object' || typeof mod.default !== 'function') {
+            return null
+          }
+
+          const {dir, name} = path.parse(filePath)
+          const type = getType(name)
+
+          // Ensure /api/cars.js => {route: /api/cars, ...}
+          const route =
+            type === 'explicit' && name !== 'index' ? `${dir}/${name}` : dir
+
+          return {
+            handler: mod.default as HandlerType,
+            type,
+            route,
+            param: getParam(name, type),
+            filePath,
+          }
+        })
+        .catch(e => {
+          console.error(`Unable to dynamically import ${fileName}:`, e)
+          return null
+        })
+    }
+  )
+
+  const results = await Promise.all(promises)
+
+  /*
+    When we have 2 files that conflict:
+      * /api/cars/index.ts
+      * /api/cars.ts
+  
+    When the 2nd file is reached, it overwrites the 1st one. Vercel also
+    prioritizes cars.ts over index.ts, presumably because of a loop like below.
+  */
+  return results.reduce((acc, obj) => {
+    if (obj === null) return acc
+
+    const {route, type, ...rest} = obj
+    if (!acc[route]) acc[route] = {} as ApiRouteDataType
+
+    acc[route][type] = rest
+
+    return acc
+  }, {} as ApiDataType)
+}
+
+type DevRequestType = VercelRequest & {originalUrl: string}
+
+function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
+  Object.entries(apiData).forEach(([route, data]) => {
+    devServer.middlewares.use(
+      route,
+      (req: DevRequestType, res: VercelResponse) => {
+        /*
+          new URL(request.url, `http://${request.getHeaders().host}`);
+          When request.url is '/status?name=ryan' and
+          request.getHeaders().host is 'localhost:3000':
+
+          $ node
+          > new URL(request.url, `http://${request.getHeaders().host}`)
+          URL {
+            href: 'http://localhost:3000/status?name=ryan',
+            origin: 'http://localhost:3000',
+            protocol: 'http:',
+            username: '',
+            password: '',
+            host: 'localhost:3000',
+            hostname: 'localhost',
+            port: '3000',
+            pathname: '/status',
+            search: '?name=ryan',
+            searchParams: URLSearchParams { 'name' => 'ryan' },
+            hash: ''
+          }
+        */
+        const url = new URL(req.originalUrl, `http://${req.headers.host ?? ''}`)
+        const pathSegments = url.pathname.replace('/api/', '').split('/')
+        const routeData = (() => {
+          switch (true) {
+            case pathSegments.length === 1:
+              return data.explicit ?? data.catchAll ?? data.catchAllOptional
+            case pathSegments.length === 2:
+              return data.dynamic ?? data.catchAll ?? data.catchAllOptional
+            case pathSegments.length > 2:
+              return data.catchAll ?? data.catchAllOptional
+            default:
+              return undefined
+          }
+        })()
+
+        // We should never hit this error...
+        if (!routeData) {
+          throw new Error(
+            `Could not find middleware handler for ${req.originalUrl}`
+          )
+        }
+
+        const {handler, param, filePath} = routeData
+
+        // Explicit.
+        if (pathSegments.length === 1) {
+          return handler(req, res)
+        }
+
+        // We should never hit this error...
+        if (!param) {
+          throw new Error(`Dynamic route param not found for ${filePath}`)
+        }
+
+        // Dynamic.
+        if (pathSegments.length === 2) {
+          const queryValue = pathSegments[1]
+
+          // req.query => { [param]: queryValue, ... }
+          req.query[param] = queryValue
+        }
+
+        // Catch all routes.
+        if (pathSegments.length > 2) {
+          // req.query => { [param]: [val1, val2, ...], ... }
+          req.query[param] = pathSegments
+        }
+
+        handler(req, res)
+      }
+    )
   })
 }
 
@@ -155,59 +333,6 @@ function getEntryPoints(basePath: string) {
 
       return acc
     }, [] as string[])
-}
-
-async function createRouteHandlerData(
-  buildResults: Awaited<ReturnType<typeof esbuild.build>>
-) {
-  const {outputFiles = []} = buildResults
-
-  const promises = outputFiles.map(file => {
-    const {path: filePath, text} = file
-    const fileName = filePath.split('/').pop() ?? ''
-
-    /*
-      https://2ality.com/2019/10/eval-via-import.html
-      eval() doesn't support import and export statements, but dynamic import()
-      does, using a `data:` URI.
-    */
-    const encodedJs = encodeURIComponent(text)
-    const dataUri = `data:text/javascript;charset=utf-8,${encodedJs}`
-
-    return import(dataUri)
-      .then(mod => {
-        if (typeof mod !== 'object' || typeof mod.default !== 'function') {
-          return null
-        }
-
-        const {dir: route, name} = path.parse(filePath)
-        const type = getType(name)
-
-        return {
-          handler: mod.default as HandlerType,
-          type,
-          route,
-          param: getParam(name, type),
-        }
-      })
-      .catch(e => {
-        console.error(`Unable to dynamically import ${fileName}:`, e)
-        return null
-      })
-  })
-
-  const results = await Promise.all(promises)
-
-  return results.reduce((acc, obj) => {
-    if (obj === null) return acc
-
-    const {route, ...rest} = obj
-    if (!acc[route]) acc[route] = []
-
-    acc[route].push(rest)
-
-    return acc
-  }, {} as Record<string, Omit<RouteHandlerDataType, 'route'>[]>)
 }
 
 function isValidFile(name: string) {

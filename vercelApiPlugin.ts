@@ -1,4 +1,5 @@
 import type {PluginOption} from 'vite'
+import type {VercelRequest, VercelResponse} from '@vercel/node'
 
 import path from 'node:path'
 import fs from 'node:fs'
@@ -39,6 +40,9 @@ export default function vercelApiPlugin(): PluginOption {
       // Adds a `res.json({...})` function that sends a JSON response.
       devServer.middlewares.use(resJsonMiddleware)
 
+      // Adds a `res.send(...)` function that sends a string, JSON, or buffer.
+      devServer.middlewares.use(resSendMiddleware)
+
       // Adds a `res.redirect('/url')` function to redirect requests.
       devServer.middlewares.use(resRedirectMiddleware)
 
@@ -49,19 +53,22 @@ export default function vercelApiPlugin(): PluginOption {
       const apiPath = path.resolve('./api')
       if (!fs.existsSync(apiPath)) return
 
-      const results = await addApiRoutesMiddleware(devServer)
-      console.log('RESULTS:')
-      console.dir(results, {depth: null})
-      process.exit(1)
+      await addApiRoutesMiddleware(devServer)
     },
   }
 }
+
+type NextType = (e?: Error) => void
 
 ///////////////////////
 // Request Middlware //
 ///////////////////////
 
-function reqQueryMiddleware(req, res, next) {
+function reqQueryMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
   const url = new URL(req.url ?? '', `http://${req?.headers.host ?? ''}`)
   const queryObj = req.query ?? {}
 
@@ -74,7 +81,11 @@ function reqQueryMiddleware(req, res, next) {
   next()
 }
 
-function reqCookiesMiddleware(req, res, next) {
+function reqCookiesMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
   const header = req.headers.cookie
 
   if (!header) {
@@ -90,7 +101,11 @@ function reqCookiesMiddleware(req, res, next) {
 // Response Middleware //
 /////////////////////////
 
-function resStatusMiddleware(req, res, next) {
+function resStatusMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
   res.status = function resStatus(statusCode) {
     res.statusCode = statusCode
     return res
@@ -99,33 +114,67 @@ function resStatusMiddleware(req, res, next) {
   next()
 }
 
-function resJsonMiddleware(req, res, next) {
-  res.json = function jsonMiddleware(jsonBody) {
+function resJsonMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
+  res.json = function resJson(jsonBody) {
     const body = JSON.stringify(jsonBody)
 
-    // content-type
-    if (!res.getHeader('content-type')) {
-      res.setHeader('content-type', 'application/json; charset=utf-8')
-    }
+    res.setHeader('content-type', 'application/json; charset=utf-8')
     return res.end(body, 'utf-8')
   }
 
   next()
 }
 
-function resRedirectMiddleware(req, res, next) {
-  res.redirect = (statusOrUrl, url) => {
+function resSendMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
+  res.send = function resSend(body) {
+    if (typeof body === 'string') {
+      res.setHeader('content-type', 'text/html; charset=utf-8')
+      res.end(body, 'utf-8')
+    } else if (Buffer.isBuffer(body)) {
+      res.setHeader('content-type', 'application/octet-stream')
+      res.end(body)
+    } else {
+      try {
+        JSON.stringify(body) // If it stringifies, we have valid JSON.
+        res.json(body)
+      } catch {
+        console.error('Unsupported type passed to `res.send`:', body)
+        throw new Error('Unsupported type passed to `res.send`')
+      }
+    }
+
+    return res
+  }
+
+  next()
+}
+
+function resRedirectMiddleware(
+  req: VercelRequest,
+  res: VercelResponse,
+  next: NextType
+) {
+  res.redirect = function resRedirect(statusOrUrl, url) {
     if (typeof statusOrUrl === 'string') {
       url = statusOrUrl
       statusOrUrl = 307
     }
+
     if (typeof statusOrUrl !== 'number' || typeof url !== 'string') {
       throw new Error(
         `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
       )
     }
-    res.writeHead(statusOrUrl, {Location: url}).end()
-    return res
+
+    return res.writeHead(statusOrUrl, {Location: url}).end()
   }
 
   next()
