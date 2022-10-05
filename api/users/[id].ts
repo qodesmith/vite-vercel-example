@@ -27,9 +27,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
         localeDate: createLocaleDate(user.dob),
         dateString: createDateString(user.dob),
       }
-      res.json(newUser)
+      res.json({data: newUser})
     } else {
-      res.json(null)
+      res.json({data: null})
     }
   } catch (e) {
     res.json({error: errorToObject(e as Error)})

@@ -2,13 +2,7 @@
 import type {VercelRequest, VercelResponse} from '@vercel/node'
 
 // `import` syntax works for local modules.
-import {
-  fakeAdd,
-  fakeHello,
-  createLocaleDate,
-  createDateString,
-  errorToObject,
-} from '../helpers'
+import {createLocaleDate, createDateString, errorToObject} from '../helpers'
 
 export type UserType = {
   id: number
@@ -19,6 +13,8 @@ export type UserType = {
     day: number
     year: number
   }
+  localeDate: string
+  dateString: string
 }
 
 /*
@@ -30,9 +26,6 @@ const fs = require('fs-extra')
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    console.log('2 + 3:', fakeAdd(2, 3))
-    console.log('Hello:', fakeHello('world'))
-
     // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
     const pathFromProjectRootToFile = '/api/users/usersData.json'
     const usersDataFilePath = path.join(
@@ -47,8 +40,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       dateString: createDateString(dob),
     }))
 
-    res.json({users: usersDataWithDates})
+    res.json({data: usersDataWithDates})
   } catch (e) {
-    res.json({error: errorToObject(e as Error)})
+    res.json({error: errorToObject(e as Error), data: null})
   }
 }

@@ -1,6 +1,6 @@
 import type {LocationGenerics} from './main'
 
-import {useMatch} from '@tanstack/react-location'
+import {useMatch, Link} from '@tanstack/react-location'
 
 export default function Users() {
   const {data} = useMatch<LocationGenerics>()
@@ -12,10 +12,12 @@ export default function Users() {
           const date = new Date(dob.year, dob.month, dob.day)
 
           return (
-            <div key={id} className="user">
-              {firstName} {lastName}
-              <div>Birthday: {date.toLocaleDateString()}</div>
-            </div>
+            <Link to={id} key={id}>
+              <div className="user">
+                {firstName} {lastName}
+                <div>Birthday: {date.toLocaleDateString()}</div>
+              </div>
+            </Link>
           )
         })}
       </div>
