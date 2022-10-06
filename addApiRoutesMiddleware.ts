@@ -168,11 +168,13 @@ async function createRouteHandlerData(buildResults: Awaited<BuildResultsType>) {
 type DevRequestType = VercelRequest & {originalUrl: string}
 
 function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
-  Object.entries(apiData).forEach(([route, data]) => {
-    devServer.middlewares.use(
-      route,
-      (req: DevRequestType, res: VercelResponse) => {
-        /*
+  Object.entries(apiData)
+    .sort(([a], [b]) => b.length - a.length) // Longest length (more specific) routes 1st.
+    .forEach(([route, data]) => {
+      devServer.middlewares.use(
+        route,
+        (req: DevRequestType, res: VercelResponse) => {
+          /*
           new URL(request.url, `http://${request.getHeaders().host}`);
           When request.url is '/status?name=ryan' and
           request.getHeaders().host is 'localhost:3000':
@@ -194,61 +196,65 @@ function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
             hash: ''
           }
         */
-        const url = new URL(req.originalUrl, `http://${req.headers.host ?? ''}`)
-        const pathSegments = url.pathname
-          .replace(route, '')
-          .split('/')
-          .filter(Boolean)
-        const routeData = (() => {
-          switch (true) {
-            case pathSegments.length === 0:
-              return data.explicit ?? data.catchAll ?? data.catchAllOptional
-            case pathSegments.length === 1:
-              return data.dynamic ?? data.catchAll ?? data.catchAllOptional
-            case pathSegments.length > 1:
-              return data.catchAll ?? data.catchAllOptional
-            default:
-              return undefined
-          }
-        })()
-
-        // We should never hit this error...
-        if (!routeData) {
-          throw new Error(
-            `Could not find middleware handler for ${req.originalUrl}`
+          const url = new URL(
+            req.originalUrl,
+            `http://${req.headers.host ?? ''}`
           )
+          const pathSegments = url.pathname
+            .replace(route, '')
+            .split('/')
+            .filter(Boolean)
+          console.log({[route]: pathSegments, pathname: url.pathname})
+          const routeData = (() => {
+            switch (true) {
+              case pathSegments.length === 0:
+                return data.explicit ?? data.catchAll ?? data.catchAllOptional
+              case pathSegments.length === 1:
+                return data.dynamic ?? data.catchAll ?? data.catchAllOptional
+              case pathSegments.length > 1:
+                return data.catchAll ?? data.catchAllOptional
+              default:
+                return undefined
+            }
+          })()
+
+          // We should never hit this error...
+          if (!routeData) {
+            throw new Error(
+              `Could not find middleware handler for ${req.originalUrl}`
+            )
+          }
+
+          const {handler, param, filePath} = routeData
+
+          // Explicit.
+          if (pathSegments.length === 0) {
+            return handler(req, res)
+          }
+
+          // We should never hit this error...
+          if (!param) {
+            throw new Error(`Dynamic route param not found for ${filePath}`)
+          }
+
+          // Dynamic.
+          if (pathSegments.length === 1) {
+            const queryValue = pathSegments[0]
+
+            // req.query => { [param]: queryValue, ... }
+            req.query[param] = queryValue
+          }
+
+          // Catch all routes.
+          if (pathSegments.length > 1) {
+            // req.query => { [param]: [val1, val2, ...], ... }
+            req.query[param] = pathSegments
+          }
+
+          handler(req, res)
         }
-
-        const {handler, param, filePath} = routeData
-
-        // Explicit.
-        if (pathSegments.length === 0) {
-          return handler(req, res)
-        }
-
-        // We should never hit this error...
-        if (!param) {
-          throw new Error(`Dynamic route param not found for ${filePath}`)
-        }
-
-        // Dynamic.
-        if (pathSegments.length === 1) {
-          const queryValue = pathSegments[0]
-
-          // req.query => { [param]: queryValue, ... }
-          req.query[param] = queryValue
-        }
-
-        // Catch all routes.
-        if (pathSegments.length > 1) {
-          // req.query => { [param]: [val1, val2, ...], ... }
-          req.query[param] = pathSegments
-        }
-
-        handler(req, res)
-      }
-    )
-  })
+      )
+    })
 }
 
 const fileUrlPlugin: esbuild.Plugin = {
