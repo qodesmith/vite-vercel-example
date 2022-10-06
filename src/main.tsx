@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client'
 import Home from './Home'
 import Users from './Users'
 import User from './User'
-import './index.css'
+import './main.css'
 import {
   Link,
   Outlet,
