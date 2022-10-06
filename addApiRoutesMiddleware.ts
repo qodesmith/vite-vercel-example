@@ -195,14 +195,17 @@ function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
           }
         */
         const url = new URL(req.originalUrl, `http://${req.headers.host ?? ''}`)
-        const pathSegments = url.pathname.replace('/api/', '').split('/')
+        const pathSegments = url.pathname
+          .replace(route, '')
+          .split('/')
+          .filter(Boolean)
         const routeData = (() => {
           switch (true) {
-            case pathSegments.length === 1:
+            case pathSegments.length === 0:
               return data.explicit ?? data.catchAll ?? data.catchAllOptional
-            case pathSegments.length === 2:
+            case pathSegments.length === 1:
               return data.dynamic ?? data.catchAll ?? data.catchAllOptional
-            case pathSegments.length > 2:
+            case pathSegments.length > 1:
               return data.catchAll ?? data.catchAllOptional
             default:
               return undefined
@@ -219,7 +222,7 @@ function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
         const {handler, param, filePath} = routeData
 
         // Explicit.
-        if (pathSegments.length === 1) {
+        if (pathSegments.length === 0) {
           return handler(req, res)
         }
 
@@ -229,15 +232,15 @@ function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
         }
 
         // Dynamic.
-        if (pathSegments.length === 2) {
-          const queryValue = pathSegments[1]
+        if (pathSegments.length === 1) {
+          const queryValue = pathSegments[0]
 
           // req.query => { [param]: queryValue, ... }
           req.query[param] = queryValue
         }
 
         // Catch all routes.
-        if (pathSegments.length > 2) {
+        if (pathSegments.length > 1) {
           // req.query => { [param]: [val1, val2, ...], ... }
           req.query[param] = pathSegments
         }
