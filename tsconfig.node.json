@@ -9,6 +9,7 @@
   "include": [
     "vite.config.ts",
     "vercelApiPlugin.ts",
-    "addApiRoutesMiddleware.ts"
+    "addApiRoutesMiddleware.ts",
+    "./middlewareHelpers/**/*.ts"
   ]
 }

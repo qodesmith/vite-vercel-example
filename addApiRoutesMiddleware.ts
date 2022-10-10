@@ -1,57 +1,54 @@
-import type {VercelRequest, VercelResponse} from '@vercel/node'
+import type {
+  VercelRequest,
+  VercelResponse,
+  VercelApiHandler,
+} from '@vercel/node'
 import type {ViteDevServer} from 'vite'
 import type {BuildResult} from 'esbuild'
-
-import path from 'path'
-import fs from 'fs-extra'
+import path from 'node:path'
+import fs from 'node:fs'
 import esbuild from 'esbuild'
 
-type ApiDataType = Record<`/api/${string}`, ApiRouteDataType>
+type ApiDataType = Record<string, ApiRouteDataType>
 
 type ApiRouteDataType = Record<
-  FileType,
+  RouteType,
   Pick<RouteHandlerDataType, 'handler' | 'param' | 'filePath'>
 >
 
 type RouteHandlerDataType = {
-  handler: HandlerType
-  type: FileType
+  handler: VercelApiHandler
+  type: RouteType
   route: string
   param: string | undefined
   filePath: string
 }
-
-type HandlerType = (req: VercelRequest, res: VercelResponse) => void
 
 type BuildResultsType = {
   esbuildResults: BuildResult
   originalFilePaths: string[]
 }
 
-type FileType =
+type RouteType =
   | 'explicit' /* cars.ts */
   | 'dynamic' /* [cardId].ts */
   | 'catchAll' /* [...slug].ts */
   | 'catchAllOptional' /* [[...slug]].ts */
 
 export default async function addApiRoutesMiddleware(devServer: ViteDevServer) {
-  const apiPath = path.resolve('./api')
+  const apiPath = path.resolve(process.cwd(), 'api')
   if (!fs.existsSync(apiPath)) return
 
   const buildResults = await buildApiFiles(apiPath)
-  const routeHandlers = await createRouteHandlerData(buildResults)
-  addApiRoutes(routeHandlers, devServer)
-
-  // console.log('API ROUTE HANDLERS:')
-  console.dir(
-    Object.entries(routeHandlers).sort(([a], [b]) => b.length - a.length),
-    {depth: null}
-  )
+  const routeHandlerData = await createRouteHandlerData(buildResults)
+  console.dir(buildResults, {depth: null})
+  addApiRoutes(routeHandlerData, devServer)
 }
 
 async function buildApiFiles(basePath): Promise<BuildResultsType> {
   const entryPoints = getEntryPoints(basePath)
   const originalFilePaths = entryPoints.map(absolutePath => {
+    // i.e. 'Users/qodesmith/some/path/api/cars' => '/api/cars'
     return absolutePath.slice(absolutePath.indexOf('/api'))
   })
 
@@ -60,7 +57,7 @@ async function buildApiFiles(basePath): Promise<BuildResultsType> {
       // Have esbuild process many files at once.
       entryPoints,
 
-      // Avoid bundling anything from node_modules.
+      // Avoid bundling anything from node_modules. They're accessible in dev.
       external: ['./node_modules/*'],
 
       /*
@@ -131,7 +128,7 @@ async function createRouteHandlerData(buildResults: Awaited<BuildResultsType>) {
             type === 'explicit' && name !== 'index' ? `${dir}/${name}` : dir
 
           return {
-            handler: mod.default as HandlerType,
+            handler: mod.default as VercelApiHandler,
             type,
             route,
             param: getParam(name, type),
@@ -206,7 +203,6 @@ function addApiRoutes(apiData: ApiDataType, devServer: ViteDevServer) {
             .replace(route, '')
             .split('/')
             .filter(Boolean)
-          console.log({[route]: pathSegments, pathname: url.pathname})
           const routeData = (() => {
             switch (true) {
               case pathSegments.length === 0:
@@ -284,7 +280,8 @@ const fileUrlPlugin: esbuild.Plugin = {
 
         /*
           Explicitly mark non-native node_modules as external and give it an
-          absolute `file://...` path for resolution.
+          absolute `file://...` path for resolution. This will be used to
+          resolve the file during development.
         */
         return {
           external: true,
@@ -350,7 +347,7 @@ function isValidFile(name: string) {
   return name.endsWith('.ts') || name.endsWith('.js')
 }
 
-function getType(name: string): FileType {
+function getType(name: string): RouteType {
   if (name.startsWith('[[...') && name.endsWith(']]')) return 'catchAllOptional'
   if (name.startsWith('[...') && name.endsWith(']')) return 'catchAll'
   if (name.startsWith('[') && name.endsWith(']')) return 'dynamic'
@@ -358,7 +355,7 @@ function getType(name: string): FileType {
   return 'explicit'
 }
 
-function getParam(name: string, type: FileType) {
+function getParam(name: string, type: RouteType) {
   switch (type) {
     case 'explicit':
       return // cars
@@ -369,6 +366,6 @@ function getParam(name: string, type: FileType) {
     case 'catchAllOptional':
       return name.slice(5, -2) // [[...slug]]
     default:
-      throw new Error('Unrecognized FileType.')
+      throw new Error(`Unrecognized route type - ${type}`)
   }
 }
