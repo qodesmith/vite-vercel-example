@@ -1,7 +1,7 @@
 // https://vercel.com/docs/runtimes#official-runtimes/node-js/using-type-script-with-the-node-js-runtime
 import type {VercelRequest, VercelResponse} from '@vercel/node'
-import type {UserType} from '../index'
-import {errorToObject, createLocaleDate, createDateString} from '../../helpers'
+import type {UserType} from './index'
+import {errorToObject, createLocaleDate, createDateString} from '../helpers'
 
 /*
   https://github.com/vercel/community/discussions/893#discussioncomment-3756470
