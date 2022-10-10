@@ -145,3 +145,21 @@ Since it's not possible to cache assets in the `/assets` directory by name becau
   ]
 }
 ```
+
+## SPA
+
+Single Page Applications let the front end do all the routing. This has a potential to conflict with the `/api` directory used for back end serverless functions. To account for this, we need to supply a `rewrites` setting in `vercel.json`:
+
+```json
+{
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/"
+    }
+  ]
+}
+```
+
+Thanks to [this Stack Overflow solution](https://stackoverflow.com/a/66940777/2525633).
