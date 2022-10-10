@@ -6,7 +6,7 @@ import path from 'path'
 import fs from 'fs-extra'
 import esbuild from 'esbuild'
 
-type ApiDataType = Record<string, ApiRouteDataType>
+type ApiDataType = Record<`/api/${string}`, ApiRouteDataType>
 
 type ApiRouteDataType = Record<
   FileType,
@@ -25,7 +25,7 @@ type HandlerType = (req: VercelRequest, res: VercelResponse) => void
 
 type BuildResultsType = {
   esbuildResults: BuildResult
-  originalFiles: string[]
+  originalFilePaths: string[]
 }
 
 type FileType =
@@ -43,12 +43,15 @@ export default async function addApiRoutesMiddleware(devServer: ViteDevServer) {
   addApiRoutes(routeHandlers, devServer)
 
   // console.log('API ROUTE HANDLERS:')
-  // console.dir(routeHandlers, {depth: null})
+  console.dir(
+    Object.entries(routeHandlers).sort(([a], [b]) => b.length - a.length),
+    {depth: null}
+  )
 }
 
 async function buildApiFiles(basePath): Promise<BuildResultsType> {
   const entryPoints = getEntryPoints(basePath)
-  const originalFiles = entryPoints.map(absolutePath => {
+  const originalFilePaths = entryPoints.map(absolutePath => {
     return absolutePath.slice(absolutePath.indexOf('/api'))
   })
 
@@ -92,19 +95,19 @@ async function buildApiFiles(basePath): Promise<BuildResultsType> {
       outdir: '/api',
     })
     .then(esbuildResults => {
-      return {esbuildResults, originalFiles}
+      return {esbuildResults, originalFilePaths}
     })
 }
 
 async function createRouteHandlerData(buildResults: Awaited<BuildResultsType>) {
-  const {esbuildResults, originalFiles} = buildResults
+  const {esbuildResults, originalFilePaths} = buildResults
   const {outputFiles = []} = esbuildResults
 
   const promises: Promise<RouteHandlerDataType | null>[] = outputFiles.map(
     (file, i) => {
       const {text} = file
-      const filePath = originalFiles[i]
-      const fileName = filePath.split('/').pop() ?? ''
+      const filePath = originalFilePaths[i]
+      const {dir, name, base: fileName} = path.parse(filePath)
 
       /*
         https://2ality.com/2019/10/eval-via-import.html
@@ -121,7 +124,6 @@ async function createRouteHandlerData(buildResults: Awaited<BuildResultsType>) {
             return null
           }
 
-          const {dir, name} = path.parse(filePath)
           const type = getType(name)
 
           // Ensure /api/cars.js => {route: /api/cars, ...}
