@@ -163,3 +163,12 @@ Single Page Applications let the front end do all the routing. This has a potent
 ```
 
 Thanks to [this Stack Overflow solution](https://stackoverflow.com/a/66940777/2525633).
+
+## Catch All vs Optional Catch All Routes
+
+- `/api/[...catchAll].ts`
+  - The `catchAll` route will _not_ respond to requests at `/api` - you will get 404's.
+- `/api/[[...optionalCatchAll]].ts`
+  - The `optionalCatchAll` route _will_ respond to requests at the directory the file is located in (i.e. `/api`).
+  - The value of `req.query` will be `undefined` when accessing `/api`.
+  - See https://youtu.be/Y8HJCfWRMTE?t=211.
