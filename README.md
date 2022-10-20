@@ -172,3 +172,7 @@ Thanks to [this Stack Overflow solution](https://stackoverflow.com/a/66940777/25
   - The `optionalCatchAll` route _will_ respond to requests at the directory the file is located in (i.e. `/api`).
   - The value of `req.query` will be `undefined` when accessing `/api`.
   - See https://youtu.be/Y8HJCfWRMTE?t=211.
+
+### Only Available For Next.js
+
+These features are _only_ available when using Next.js - see [this discussion](https://github.com/orgs/vercel/discussions/947#discussioncomment-3872755). Using `[...catchAll]` and `[[...optionalCatchAll]]` routes in Vercel's `/api` directory in a non-Next.js app is **not supported**. However, `[dynamicRoutes]` are supported. It's interesting because at the end of the day, it's all running on Vercel's infrastructure anyway 🤷‍♂️.
